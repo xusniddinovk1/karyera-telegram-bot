@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+.python-version
+uv.lock
+staticfiles
+
 # Distribution / packaging
 .Python
 .idea
