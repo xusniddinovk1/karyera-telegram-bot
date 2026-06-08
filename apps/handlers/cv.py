@@ -5,6 +5,10 @@ from aiogram.fsm.state import State, StatesGroup
 
 from aiogram.types import Message
 
+from apps.services.ai_service import ClaudeService
+
+# from apps.services.ai_service import ClaudeService
+
 router = Router()
 
 
@@ -51,7 +55,11 @@ async def process_skills(message: Message, state: FSMContext) -> None:
 
 
 @router.message(CVForm.waiting_projects)
-async def process_projects(message: Message, state: FSMContext) -> None:
+async def process_projects(
+        message: Message,
+        state: FSMContext,
+        claude_service: ClaudeService
+) -> None:
     await state.update_data(projects=message.text)
 
     # Barcha ma'lumotlarni yig'amiz
@@ -68,3 +76,26 @@ async def process_projects(message: Message, state: FSMContext) -> None:
         f"🚀 Loyihalar: {data['projects']}\n\n"
         f"Tez orada CV tayyor bo'ladi..."
     )
+    await message.answer("⏳ CV tayyorlanmoqda...")
+
+    prompt = f"""
+    Quyidagi ma'lumotlar asosida professional CV yoz (o'zbek tilida):
+
+    Ism: {data['name']}
+    Mutaxassislik: {data['speciality']}
+    Tajriba: {data['experiences']}
+    Ko'nikmalar: {data['skills']}
+    Loyihalar: {data['projects']}
+
+    CV quyidagi bo'limlardan iborat bo'lsin:
+    1. Shaxsiy ma'lumotlar
+    2. Kasbiy maqsad (2-3 jumla)
+    3. Tajriba
+    4. Ko'nikmalar
+    5. Loyihalar
+
+    Professional, ixcham va HR ga yoqadigan uslubda yoz.
+    """
+
+    cv_text = await claude_service.generate_text(prompt)
+    await message.answer(cv_text)
