@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     CLAUDE_API_KEY: str
     POSTHOG_API_KEY: str
+    DATABASE_URL: str
 
     class Config:
         model_config = SettingsConfigDict(env_file=".env")
