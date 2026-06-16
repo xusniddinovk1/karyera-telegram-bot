@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -6,6 +8,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 
 from apps.services.ai_service import ClaudeService
+from apps.services.analytics_service import AnalyticsService
 
 # from apps.services.ai_service import ClaudeService
 
@@ -21,7 +24,16 @@ class CVForm(StatesGroup):
 
 
 @router.message(Command("cv"))
-async def process_cv(message: Message, state: FSMContext) -> None:
+async def process_cv(
+        message: Message,
+        state: FSMContext,
+        analytics_service: AnalyticsService
+
+) -> None:
+    analytics_service.track(
+        user_id=message.from_user.id,
+        event="cv_started",
+    )
     await state.set_state(CVForm.waiting_name)
     await message.answer("Ism-Familiyangiz?")
 
@@ -58,7 +70,8 @@ async def process_skills(message: Message, state: FSMContext) -> None:
 async def process_projects(
         message: Message,
         state: FSMContext,
-        claude_service: ClaudeService
+        claude_service: ClaudeService,
+        analytics_service: AnalyticsService
 ) -> None:
     await state.update_data(projects=message.text)
 
@@ -66,7 +79,14 @@ async def process_projects(
     data = await state.get_data()
     await state.clear()
 
-    # Hozircha oddiy matn — keyinchalik AI ga yuboramiz
+    analytics_service.track(
+        user_id=message.from_user.id,
+        event="cv_completed",
+        properties={
+            "speciality": data["speciality"],
+        }
+    )
+
     await message.answer(
         f"✅ Ma'lumotlar qabul qilindi!\n\n"
         f"👤 Ism: {data['name']}\n"
@@ -78,24 +98,24 @@ async def process_projects(
     )
     await message.answer("⏳ CV tayyorlanmoqda...")
 
-    prompt = f"""
-    Quyidagi ma'lumotlar asosida professional CV yoz (o'zbek tilida):
-
-    Ism: {data['name']}
-    Mutaxassislik: {data['speciality']}
-    Tajriba: {data['experiences']}
-    Ko'nikmalar: {data['skills']}
-    Loyihalar: {data['projects']}
-
-    CV quyidagi bo'limlardan iborat bo'lsin:
-    1. Shaxsiy ma'lumotlar
-    2. Kasbiy maqsad (2-3 jumla)
-    3. Tajriba
-    4. Ko'nikmalar
-    5. Loyihalar
-
-    Professional, ixcham va HR ga yoqadigan uslubda yoz.
-    """
-
-    cv_text = await claude_service.generate_text(prompt)
-    await message.answer(cv_text)
+    # prompt = f"""
+    # Quyidagi ma'lumotlar asosida professional CV yoz (o'zbek tilida):
+    #
+    # Ism: {data['name']}
+    # Mutaxassislik: {data['speciality']}
+    # Tajriba: {data['experiences']}
+    # Ko'nikmalar: {data['skills']}
+    # Loyihalar: {data['projects']}
+    #
+    # CV quyidagi bo'limlardan iborat bo'lsin:
+    # 1. Shaxsiy ma'lumotlar
+    # 2. Kasbiy maqsad (2-3 jumla)
+    # 3. Tajriba
+    # 4. Ko'nikmalar
+    # 5. Loyihalar
+    #
+    # Professional, ixcham va HR ga yoqadigan uslubda yoz.
+    # """
+    #
+    # cv_text = await claude_service.generate_text(prompt)
+    # await message.answer(cv_text)
